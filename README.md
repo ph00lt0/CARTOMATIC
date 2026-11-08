@@ -1,5 +1,9 @@
 # CARTOMATIC
 
+
+![Uploading cartomatic-A3-landscape-300dpi.png…]()
+
+
 Generate and style your GeoJSON to make posters of locations.
 
 CARTOMATIC is a browser-based map poster generator for turning GeoJSON data into stylized travel-poster layouts. Upload a GeoJSON file or paste JSON, choose a basemap, tune colors and overlays, and export a printable poster PNG sized for common paper formats.
