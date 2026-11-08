@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CARTOMATIC '76 — GeoJSON poster press (v10)</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
+<style>
+  :root {
+    --paper: #f4ecd8; --ink: #33261d; --panel: #efe4c9; --panel2: #e5d7b4;
+    --border: #b09468; --muted: #7c6748; --orange: #d95d2b; --orange2: #e87a45;
+    --teal: #1f6f6b; --mustard: #d9a52b; --red: #b3402e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Courier New", Courier, monospace; background: var(--paper); color: var(--ink); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  header { background: var(--ink); color: var(--paper); padding: 10px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-bottom: 4px solid var(--orange); }
+  header h1 { font-size: 16px; font-weight: 700; letter-spacing: 3px; white-space: nowrap; text-transform: uppercase; }
+  header h1 em { font-style: normal; color: var(--mustard); }
+  header .tagline { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #b8a98c; }
+  .btn { background: var(--orange); color: var(--paper); border: 2px solid var(--ink); padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; text-transform: uppercase; letter-spacing: 1px; box-shadow: 3px 3px 0 var(--ink); }
+  .btn:hover { background: var(--orange2); }
+  .btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn.secondary { background: var(--teal); color: var(--paper); }
+  .btn.secondary:hover { background: #2a8a85; }
+
+  main { flex: 1; display: flex; min-height: 0; }
+  aside { width: 330px; min-width: 330px; background: var(--panel); border-right: 3px solid var(--ink); overflow-y: auto; padding: 14px; }
+  aside::-webkit-scrollbar { width: 10px; }
+  aside::-webkit-scrollbar-track { background: var(--panel); }
+  aside::-webkit-scrollbar-thumb { background: var(--border); border: 2px solid var(--ink); }
+
+  section { margin-bottom: 18px; background: var(--paper); border: 2px solid var(--ink); padding: 10px; box-shadow: 4px 4px 0 rgba(51,38,29,.25); }
+  section > h2 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px dashed var(--border); display: flex; align-items: center; gap: 6px; }
+  section > h2::before { content: "▚"; color: var(--mustard); }
+
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .field input[type="text"], .field input[type="number"], .field input[type="range"], .field select, .field textarea {
+    width: 100%; background: var(--panel2); border: 2px solid var(--border);
+    padding: 7px 9px; color: var(--ink); font-size: 12px; font-family: inherit;
+  }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--teal); }
+
+  .radio-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .radio-row label { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; background: var(--panel2); border: 2px solid var(--border); padding: 8px 10px; }
+  .radio-row label.active { border-color: var(--orange); background: #f7dfae; }
+  .radio-row input { accent-color: var(--orange); }
+
+  .symrow { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .symrow button { width: 42px; height: 42px; background: var(--panel2); border: 2px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .symrow button:hover { border-color: var(--teal); }
+  .symrow button.active { border-color: var(--orange); background: #f7dfae; }
+  .symrow svg { width: 22px; height: 22px; fill: var(--ink); }
+  .symrow button.active svg { fill: var(--orange); }
+
+  .inline { display: flex; gap: 8px; }
+  .inline .field { flex: 1; }
+  input[type="color"] { width: 100%; height: 34px; background: var(--panel2); border: 2px solid var(--border); cursor: pointer; padding: 2px; }
+  .hint { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+  .hint code { color: var(--teal); }
+
+  .toggle { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .toggle span { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .switch { position: relative; width: 40px; height: 20px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border: 2px solid var(--ink); transition: .15s; }
+  .slider::before { content: ""; position: absolute; height: 12px; width: 12px; left: 2px; top: 2px; background: var(--paper); border: 2px solid var(--ink); transition: .15s; }
+  .switch input:checked + .slider { background: var(--teal); }
+  .switch input:checked + .slider::before { transform: translateX(18px); background: var(--mustard); }
+
+  .disabled-block { opacity: .35; pointer-events: none; }
+  .crow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .crow .cname { flex: 1; font-size: 11px; }
+  .crow .ccount { font-size: 9px; color: var(--muted); }
+  .crow input[type="color"] { width: 40px; height: 26px; flex-shrink: 0; padding: 1px; }
+
+  #mapwrap { flex: 1; position: relative; min-width: 0; }
+  #map { position: absolute; inset: 0; background: var(--panel2); }
+
+  #fx { position: absolute; inset: 0; pointer-events: none; z-index: 650; display: none; }
+  #mapwrap.fx-vignette #fx { display: block; background: radial-gradient(ellipse at center, transparent 55%, rgba(30,18,8,.6) 100%); }
+  #mapwrap.fx-grain #fx { display: block; opacity: .5; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E"); }
+  #mapwrap.fx-scanlines #fx { display: block; background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); }
+
+  #stats { position: absolute; bottom: 12px; left: 12px; z-index: 700; background: var(--ink); color: var(--paper); border: 2px solid var(--orange); padding: 8px 12px; font-size: 11px; max-width: 60%; }
+  #stats strong { color: var(--mustard); }
+
+  #croptool { position: absolute; z-index: 750; display: none; border: 3px dashed #d95d2b; cursor: grab; touch-action: none; }
+  #croptool.on { display: block; }
+  #croptool.dragging { cursor: grabbing; }
+  #croptool .ct-tag {
+    position: absolute; top: -26px; left: -3px; background: #d95d2b; color: #f4ecd8;
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 2px 8px;
+    text-transform: uppercase; pointer-events: none; white-space: nowrap;
+  }
+
+  .gc-marker { cursor: pointer; }
+  .gc-marker .gc-label {
+    position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    margin-top: 2px; white-space: nowrap; font-size: 11px; font-weight: 700;
+    color: var(--ink); text-shadow: 0 0 3px var(--paper), 0 0 3px var(--paper), 0 0 3px var(--paper);
+    pointer-events: none;
+  }
+  .maplibregl-popup-content { font-size: 12px; font-family: inherit; }
+  .maplibregl-ctrl-group button { background: var(--paper); }
+  .maplibregl-ctrl-attrib { background: rgba(244,236,216,.85) !important; font-family: inherit; font-size: 10px; }
+
+  #busy { position: absolute; inset: 0; z-index: 900; display: none; background: rgba(51,38,29,.75); align-items: center; justify-content: center; color: var(--paper); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+  #busy.on { display: flex; }
+
+  @media (max-width: 800px) {
+    main { flex-direction: column; }
+    aside { width: 100%; min-width: 0; max-height: 45vh; border-right: none; border-bottom: 3px solid var(--ink); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>CARTO<em>MATIC</em> '76</h1>
+  <span class="tagline">GeoJSON poster press · v10</span>
+  <button class="btn secondary" id="fitbtn">Fit to data</button>
+</header>
+
+<main>
+  <aside>
+
+    <section>
+      <h2>GeoJSON data</h2>
+      <div class="field">
+        <label>Upload file (.geojson / .json)</label>
+        <input type="file" id="geojsonfile" accept=".geojson,.json,application/geo+json">
+      </div>
+      <div class="field">
+        <label>…or paste GeoJSON</label>
+        <textarea id="geojsonpaste" rows="4" placeholder='{ "type": "FeatureCollection", ... }'></textarea>
+      </div>
+      <button class="btn" id="loaddata">Render data</button>
+      <button class="btn secondary" id="samplebtn">Random sample trip</button>
+      <p class="hint">Points → markers, lines/polygons → overlays.</p>
+    </section>
+
+    <section>
+      <h2>Basemap</h2>
+      <div class="field">
+        <select id="basemap">
+          <option value="liberty" selected>Liberty (OpenFreeMap)</option>
+          <option value="bright">Bright (OpenFreeMap)</option>
+          <option value="positron">Positron (OpenFreeMap)</option>
+          <option value="blank">Blank poster canvas</option>
+        </select>
+      </div>
+      <p class="hint">Free vector tiles via OpenFreeMap, OSM attribution included.</p>
+    </section>
+
+    <section>
+      <h2>Custom map style</h2>
+      <div class="toggle">
+        <span>Hide all map labels</span>
+        <label class="switch"><input type="checkbox" id="hidlabels"><span class="slider"></span></label>
+      </div>
+      <div id="styleeditor"><p class="hint">Loading layers…</p></div>
+      <button class="btn secondary" id="resetstyle">Reset style edits</button>
+      <button class="btn secondary" id="paledawn">Pale Dawn palette</button>
+      <p class="hint">Pale Dawn colors are pre-applied and re-applied on basemap switches. Hover a row name to see which layers it drives.</p>
+    </section>
+
+    <section>
+      <h2>Poster press</h2>
+      <div class="field">
+        <label>Paper size</label>
+        <select id="papersize">
+          <option value="A0">A0 — 841 × 1189 mm</option>
+          <option value="A1">A1 — 594 × 841 mm</option>
+          <option value="A2">A2 — 420 × 594 mm</option>
+          <option value="A3" selected>A3 — 297 × 420 mm</option>
+          <option value="A4">A4 — 210 × 297 mm</option>
+          <option value="A5">A5 — 148 × 210 mm</option>
+          <option value="A6">A6 — 105 × 148 mm</option>
+          <option value="letter">Letter — 216 × 279 mm</option>
+          <option value="sq50">Square 50 × 50 cm</option>
+        </select>
+      </div>
+      <div class="inline">
+        <div class="field">
+          <label>Orientation</label>
+          <select id="orient">
+            <option value="portrait" selected>Portrait</option>
+            <option value="landscape">Landscape</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>DPI</label>
+          <select id="dpi">
+            <option value="150">150</option>
+            <option value="300" selected>300</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Title (printed under the map)</label>
+        <input type="text" id="postertitle" placeholder="e.g. Summer 2026">
+      </div>
+      <div class="field">
+        <label>Margin (mm)</label>
+        <input type="number" id="margin" value="10" min="0" max="60">
+      </div>
+      <div class="field">
+        <label>Crop frame</label>
+        <button class="btn secondary" id="croptoggle">Set crop frame on map</button>
+        <p class="hint" id="cropinfo">Off — prints the current map view. With the frame on: drag the orange box to choose the print area, zoom to resize, drag the map to pan underneath. Changing paper/margin/title auto-refits the frame's shape.</p>
+      </div>
+      <button class="btn" id="exportposter">Print poster PNG</button>
+      <p class="hint">Prints exactly the framed area at your zoom, with markers, labels, curves and dashes baked in at true scale. A0 at 300 dpi clamps to the ~8192 px GPU limit — use 150 dpi for A0/A1.</p>
+    </section>
+
+    <section>
+      <h2>Markers</h2>
+      <div class="radio-row" id="markertype">
+        <label><input type="radio" name="mtype" value="default"> Default map pin</label>
+        <label class="active"><input type="radio" name="mtype" value="styled" checked> Styled marker</label>
+      </div>
+      <div id="markeropts">
+        <div class="field"><label>Symbol</label></div>
+        <div class="symrow" id="symbols"></div>
+        <div class="inline">
+          <div class="field"><label>Color</label><input type="color" id="mcolor" value="#b3402e"></div>
+          <div class="field"><label>Size (px)</label><input type="number" id="msize" value="36" min="12" max="96" step="2"></div>
+        </div>
+        <div class="inline">
+          <div class="field"><label>Stroke color</label><input type="color" id="mstroke" value="#33261d"></div>
+          <div class="field"><label>Stroke width</label><input type="number" id="mstrokew" value="1" min="0" max="6"></div>
+        </div>
+        <div class="toggle">
+          <span>Show labels (name property)</span>
+          <label class="switch"><input type="checkbox" id="mlabels"><span class="slider"></span></label>
+        </div>
+        <p class="hint">Per-feature overrides: <code>icon-color</code>, <code>icon-symbol</code> in properties.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Overlay layers</h2>
+      <div class="toggle">
+        <span>Draw lines &amp; polygons from GeoJSON</span>
+        <label class="switch"><input type="checkbox" id="showoverlays" checked><span class="slider"></span></label>
+      </div>
+      <div id="overlayopts">
+        <div class="inline">
+          <div class="field"><label>Line color</label><input type="color" id="oline" value="#8a7ba0"></div>
+          <div class="field"><label>Line width</label><input type="number" id="olinew" value="3" min="1" max="10"></div>
+        </div>
+        <div class="inline">
+          <div class="field">
+            <label>Line style</label>
+            <select id="linestyle">
+              <option value="solid" selected>Solid</option>
+              <option value="dash">Dashed</option>
+              <option value="dot">Dotted</option>
+              <option value="dashdot">Dash-dot</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Route shape</label>
+            <select id="curvestyle">
+              <option value="none">Straight</option>
+              <option value="greatcircle">Great circle</option>
+              <option value="bow" selected>Playful bow</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Bow strength (curve amount): <span id="bowval">25%</span></label>
+          <input type="range" id="bowstrength" min="5" max="60" value="25" step="5">
+        </div>
+        <div class="inline">
+          <div class="field"><label>Fill color</label><input type="color" id="ofill" value="#d9a52b"></div>
+          <div class="field"><label>Fill opacity (%)</label><input type="number" id="ofillo" value="25" min="0" max="100"></div>
+        </div>
+        <div class="toggle">
+          <span>Popups on shapes (name)</span>
+          <label class="switch"><input type="checkbox" id="otooltip" checked><span class="slider"></span></label>
+        </div>
+      </div>
+      <p class="hint"><strong>Playful bow</strong>: each leg from A to B is bent into a swooping arc perpendicular to its direction, alternating sides per leg — the classic travel-poster look. Great circle is the subtle geodesic bend. Applies to lines; polygon fills stay flat.</p>
+    </section>
+
+    <section>
+      <h2>Vintage effects (optional)</h2>
+      <div class="toggle">
+        <span>Enable effect overlay</span>
+        <label class="switch"><input type="checkbox" id="fxon"><span class="slider"></span></label>
+      </div>
+      <div id="fxopts" class="disabled-block">
+        <div class="field">
+          <select id="fxtype">
+            <option value="fx-vignette">Vignette</option>
+            <option value="fx-grain">Film grain</option>
+            <option value="fx-scanlines">CRT scanlines</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint">Off by default — baked into poster exports too.</p>
+    </section>
+
+  </aside>
+
+  <div id="mapwrap">
+    <div id="map"></div>
+    <div id="fx"></div>
+    <div id="croptool"><div class="ct-tag">✂ print area — drag me</div></div>
+    <div id="stats" style="display:none"></div>
+    <div id="busy">Pressing poster…</div>
+  </div>
+</main>
+
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+<script>
+"use strict";
+
+/* =====================================================================
+   CARTOMATIC '76 v10
+   FIXES vs v9:
+   - Poster markers vanished: map.project() on the poster-sized offscreen
+     map already returns POSTER pixels, but v9 multiplied them by the
+     scale factor again → markers landed far outside the clip and were
+     cut off. Positions are now used as-is; only marker SIZE scales up.
+   - Curves did nothing: the great-circle assembler kept only arc
+     endpoints (start/1) and discarded interior points. Fixed, and a
+     "Playful bow" mode added: quadratic arcs perpendicular to each leg,
+     alternating sides, adjustable strength slider.
+   ===================================================================== */
+
+/* --- random sample data --- */
+function rnd(lo, hi) { return lo + Math.random() * (hi - lo); }
+function makeSampleTrip() {
+  const names = ["Port Vega", "Cabo Alto", "New Meridian", "Isla Rosa", "Port Echo",
+                 "Cape Halcyon", "Solis Bay", "Refugio Norte", "Terminus City"];
+  const stops = [];
+  const n = 5 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < n; i++) {
+    stops.push({ name: names[i % names.length] + (i >= names.length ? " II" : ""), lng: rnd(-170, 170), lat: rnd(-55, 62) });
+  }
+  const feats = stops.map(s => ({
+    type: "Feature", properties: { name: s.name },
+    geometry: { type: "Point", coordinates: [s.lng, s.lat] },
+  }));
+  feats.push({ type: "Feature", properties: { name: "The long way round" },
+    geometry: { type: "LineString", coordinates: stops.map(s => [s.lng, s.lat]) } });
+  return { type: "FeatureCollection", features: feats };
+}
+let SAMPLE_GEOJSON = makeSampleTrip();
+
+const VECTOR_STYLES = {
+  liberty: "https://tiles.openfreemap.org/styles/liberty",
+  bright: "https://tiles.openfreemap.org/styles/bright",
+  positron: "https://tiles.openfreemap.org/styles/positron",
+};
+
+const PAPERS = {
+  A0: [841, 1189], A1: [594, 841], A2: [420, 594], A3: [297, 420], A4: [210, 297],
+  A5: [148, 210], A6: [105, 148], letter: [215.9, 279.4], sq50: [500, 500],
+};
+
+const PALE_DAWN = {
+  background: "#f2e5d4", water: "#acbcc9", waterway: "#acbcc9", park: "#c5dac6",
+  building: "#e0d3c1", "road-hwy": "#c5c6c6", "road-main": "#e4d7c6", "road-minor": "#fbfaf7",
+  boundary: "#cbb8a0", labels: "#5b4a36", "label-halo": "#f8efe0",
+};
+
+const state = {
+  map: null,
+  basemap: "liberty",
+  geojson: null,
+  markers: [],
+  points: [],
+  bounds: null,
+  cropBox: null,
+  cropActive: false,
+  markerStyle: { type: "styled", symbol: "pin", color: "#b3402e", size: 36, stroke: "#33261d", strokeW: 1, labels: false },
+  overlayStyle: { line: "#8a7ba0", lineW: 3, fill: "#d9a52b", fillO: 0.25, show: true, tooltip: true, dash: "solid", curve: "bow", bow: 0.25 },
+  styleEdits: {},
+  hideLabels: false,
+};
+
+function $(id) { return document.getElementById(id); }
+const mapwrap = $("mapwrap");
+const croptool = $("croptool");
+
+/* ---------- poster geometry ---------- */
+function printRegion() {
+  const paper = $("papersize").value, orient = $("orient").value, dpi = +$("dpi").value;
+  const [sh, lo] = PAPERS[paper];
+  const wmm = orient === "portrait" ? sh : lo;
+  const hmm = orient === "portrait" ? lo : sh;
+  let w = Math.round(wmm / 25.4 * dpi);
+  let h = Math.round(hmm / 25.4 * dpi);
+  const scale = Math.min(1, 8192 / Math.max(w, h));
+  w = Math.round(w * scale); h = Math.round(h * scale);
+  const marginPx = Math.round(Math.max(0, +$("margin").value || 0) / 25.4 * dpi * scale);
+  const title = $("postertitle").value.trim();
+  const th = title ? Math.round(h * 0.05) : 0;
+  return { w, h, marginPx, th, title, mw: w - marginPx * 2, mh: h - marginPx * 2 - th };
+}
+
+/* ---------- custom style editor ---------- */
+const GROUP_DEFS = [
+  { id: "background", name: "Land / background", type: "background", prop: "background-color", pick: () => true },
+  { id: "water",      name: "Water",             type: "fill",  prop: "fill-color",  pick: l => (l["source-layer"] || "").indexOf("water") === 0 },
+  { id: "waterway",   name: "Rivers / streams",  type: "line",  prop: "line-color",  pick: l => (l["source-layer"] || "").indexOf("waterway") === 0 },
+  { id: "park",       name: "Parks / forest",    type: "fill",  prop: "fill-color",  pick: l => /^(park|landcover|landuse)/.test(l["source-layer"] || "") },
+  { id: "building",   name: "Buildings",         type: "fill",  prop: "fill-color",  pick: l => (l["source-layer"] || "") === "building" },
+  { id: "road-hwy",   name: "Motorways / trunk", type: "line",  prop: "line-color",  pick: l => (l["source-layer"] || "") === "transportation" && /motorway|trunk/.test(JSON.stringify(l.filter || "")) },
+  { id: "road-main",  name: "Main roads",        type: "line",  prop: "line-color",  pick: l => (l["source-layer"] || "") === "transportation" && /primary|secondary/.test(JSON.stringify(l.filter || "")) },
+  { id: "road-minor", name: "Minor roads",       type: "line",  prop: "line-color",  pick: l => (l["source-layer"] || "") === "transportation" },
+  { id: "boundary",   name: "Borders",           type: "line",  prop: "line-color",  pick: l => (l["source-layer"] || "").indexOf("boundary") === 0 },
+  { id: "labels",     name: "Label text",        type: "symbol", prop: "text-color",      pick: () => true },
+  { id: "label-halo", name: "Label halo",        type: "symbol", prop: "text-halo-color", pick: () => true },
+];
+
+function currentGroups() {
+  const groups = {};
+  GROUP_DEFS.forEach(g => groups[g.id] = []);
+  (state.map.getStyle().layers || []).forEach(layer => {
+    GROUP_DEFS.forEach(g => { if (layer.type === g.type && g.pick(layer)) groups[g.id].push(layer.id); });
+  });
+  return groups;
+}
+
+function firstColor(layers, prop) {
+  for (const id of layers) {
+    try {
+      const v = state.map.getPaintProperty(id, prop);
+      if (typeof v === "string" && (v[0] === "#" || v.indexOf("rgb") === 0)) return v;
+    } catch (e) {}
+  }
+  return null;
+}
+
+function buildStyleEditor() {
+  const host = $("styleeditor");
+  host.innerHTML = "";
+  if (state.basemap === "blank") {
+    host.innerHTML = '<p class="hint">Blank canvas — set the background color:</p>';
+    addRow(host, "background", "Background", ["gc-bg"], "background-color", state.styleEdits.background || PALE_DAWN.background, 1);
+    return;
+  }
+  const groups = currentGroups();
+  let shown = 0;
+  GROUP_DEFS.forEach(g => {
+    const ids = groups[g.id];
+    if (!ids.length) return;
+    const cur = state.styleEdits[g.id] || firstColor(ids, g.prop) || "#888888";
+    addRow(host, g.id, g.name, ids, g.prop, cur, ids.length);
+    shown++;
+  });
+  if (!shown) host.innerHTML = '<p class="hint">No editable layers found in this style.</p>';
+}
+
+function addRow(host, gid, name, layerIds, prop, initial, count) {
+  const row = document.createElement("div");
+  row.className = "crow";
+  const nm = document.createElement("div");
+  nm.className = "cname";
+  nm.textContent = name;
+  nm.title = layerIds.join(", ");
+  if (count) {
+    const c = document.createElement("span"); c.className = "ccount"; c.textContent = " (" + count + ")";
+    nm.appendChild(c);
+  }
+  const inp = document.createElement("input");
+  inp.type = "color";
+  inp.value = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(initial) ? initial : "#888888";
+  inp.addEventListener("input", () => {
+    state.styleEdits[gid] = inp.value;
+    layerIds.forEach(id => { try { state.map.setPaintProperty(id, prop, inp.value); } catch (e) {} });
+  });
+  row.appendChild(nm); row.appendChild(inp);
+  host.appendChild(row);
+}
+
+function setGroupColor(gid, hex) {
+  state.styleEdits[gid] = hex;
+  if (!state.map) return;
+  if (state.basemap === "blank") {
+    if (gid === "background") { try { state.map.setPaintProperty("gc-bg", "background-color", hex); } catch (e) {} }
+    return;
+  }
+  const groups = currentGroups();
+  const def = GROUP_DEFS.find(g => g.id === gid);
+  (groups[gid] || []).forEach(id => { try { state.map.setPaintProperty(id, def.prop, hex); } catch (e) {} });
+}
+
+function applyPaleDawn() {
+  Object.entries(PALE_DAWN).forEach(([gid, hex]) => setGroupColor(gid, hex));
+  buildStyleEditor();
+}
+
+function applyStyleEdits() {
+  if (!state.map) return;
+  if (state.basemap === "blank") {
+    if (state.styleEdits.background) { try { state.map.setPaintProperty("gc-bg", "background-color", state.styleEdits.background); } catch (e) {} }
+  } else {
+    const groups = currentGroups();
+    Object.entries(state.styleEdits).forEach(([gid, hex]) => {
+      const def = GROUP_DEFS.find(g => g.id === gid);
+      if (!def || !groups[gid]) return;
+      groups[gid].forEach(id => { try { state.map.setPaintProperty(id, def.prop, hex); } catch (e) {} });
+    });
+  }
+  applyHideLabels();
+}
+
+function applyHideLabels() {
+  if (!state.map) return;
+  const vis = state.hideLabels ? "none" : "visible";
+  (state.map.getStyle().layers || []).forEach(layer => {
+    if (layer.type === "symbol") {
+      try { state.map.setLayoutProperty(layer.id, "visibility", vis); } catch (e) {}
+    }
+  });
+}
+
+/* ---------- basemap ---------- */
+function setBasemap(key) {
+  state.basemap = key;
+  if (!state.map) return;
+  state.styleEdits = Object.assign({}, PALE_DAWN);
+  if (VECTOR_STYLES[key]) {
+    state.map.setStyle(VECTOR_STYLES[key]);
+    state.map.once("style.load", () => {
+      attachDataLayers();
+      applyStyleEdits();
+      buildStyleEditor();
+    });
+  } else if (key === "blank") {
+    state.map.setStyle({
+      version: 8, sources: {},
+      layers: [{ id: "gc-bg", type: "background", paint: { "background-color": state.styleEdits.background || PALE_DAWN.background } }],
+      glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+    });
+    state.map.once("style.load", () => { attachDataLayers(); buildStyleEditor(); });
+  }
+}
+
+/* ---------- curve engines ---------- */
+/* Great circle — fixed: emits ALL interior arc points. */
+function gcArc(a, b, n) {
+  n = n || 48;
+  const toRad = d => d * Math.PI / 180, toDeg = r => r * 180 / Math.PI;
+  const lon1 = toRad(a[0]), lat1 = toRad(a[1]), lon2 = toRad(b[0]), lat2 = toRad(b[1]);
+  const d = 2 * Math.asin(Math.sqrt(Math.sin((lat2-lat1)/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin((lon2-lon1)/2)**2));
+  const pts = [];
+  if (d === 0) return [a.slice()];
+  for (let i = 0; i <= n; i++) {
+    const f = i / n;
+    const A = Math.sin((1-f)*d)/Math.sin(d), B = Math.sin(f*d)/Math.sin(d);
+    const x = A*Math.cos(lat1)*Math.cos(lon1) + B*Math.cos(lat2)*Math.cos(lon2);
+    const y = A*Math.cos(lat1)*Math.sin(lon1) + B*Math.cos(lat2)*Math.sin(lon2);
+    const z = A*Math.sin(lat1) + B*Math.sin(lat2);
+    pts.push([toDeg(Math.atan2(y,x)), toDeg(Math.atan2(z, Math.sqrt(x*x+y*y)))]);
+  }
+  return pts;
+}
+function gcCoords(coords) {
+  const out = [];
+  for (let i = 0; i < coords.length - 1; i++) {
+    const seg = gcArc(coords[i], coords[i+1]);
+    for (let j = 1; j < seg.length; j++) {           // unwrap antimeridian jumps
+      if (seg[j][0] - seg[j-1][0] > 180) seg[j][0] -= 360;
+      else if (seg[j][0] - seg[j-1][0] < -180) seg[j][0] += 360;
+    }
+    const start = (i === 0) ? 0 : 1;
+    for (let j = start; j < seg.length; j++) out.push(seg[j]);   // ALL arc points
+  }
+  if (!out.length && coords.length) out.push(coords[0]);
+  return out;
+}
+
+/* Playful bow: quadratic-bezier arc perpendicular to each leg,
+   alternating sides per leg for a wave-like route. */
+function bowSeg(a, b, k, side, n) {
+  n = n || 32;
+  const latMid = (a[1] + b[1]) / 2 * Math.PI / 180;
+  const cosL = Math.max(0.05, Math.cos(latMid));
+  const ax = a[0]*cosL, ay = a[1], bx = b[0]*cosL, by = b[1];
+  const dx = bx - ax, dy = by - ay;
+  const len = Math.hypot(dx, dy) || 1e-9;
+  const px = -dy / len, py = dx / len;               // unit perpendicular
+  const bow = len * k * side;
+  const cx = (ax + bx) / 2 + px * bow;
+  const cy = (ay + by) / 2 + py * bow;
+  const ctrlLng = cx / cosL, ctrlLat = cy;
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, u = 1 - t;
+    pts.push([
+      u*u*a[0] + 2*u*t*ctrlLng + t*t*b[0],
+      u*u*a[1] + 2*u*t*ctrlLat + t*t*b[1],
+    ]);
+  }
+  return pts;
+}
+function bowCoords(coords) {
+  const k = state.overlayStyle.bow;
+  const out = [];
+  let side = 1;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const seg = bowSeg(coords[i], coords[i+1], k, side, 32);
+    const start = (i === 0) ? 0 : 1;
+    for (let j = start; j < seg.length; j++) out.push(seg[j]);  // ALL bow points
+    side = -side;                                    // alternate: wave route
+  }
+  if (!out.length && coords.length) out.push(coords[0]);
+  return out;
+}
+
+function maybeCurve(geometry) {
+  const mode = state.overlayStyle.curve;
+  if (mode === "none") return geometry;
+  const fn = mode === "bow" ? bowCoords : gcCoords;
+  if (geometry.type === "LineString")
+    return { type: "LineString", coordinates: fn(geometry.coordinates) };
+  if (geometry.type === "MultiLineString")
+    return { type: "MultiLineString", coordinates: geometry.coordinates.map(fn) };
+  return geometry; // polygons untouched
+}
+
+/* ---------- markers ---------- */
+const SYMBOLS = {
+  pin:    { path: "M24 0C13.5 0 5 8.5 5 19c0 11.9 19 41 19 41s19-29.1 19-41C43 8.5 34.5 0 24 0zm0 26a7 7 0 1 1 0-14 7 7 0 0 1 0 14z", vb: [48, 60] },
+  shield: { path: "M24 2l18 7v14c0 11-7.7 19.6-18 23C13.7 42.6 6 34 6 23V9l18-7z", vb: [48, 46] },
+  star:   { path: "M24 2l6.5 13.2 14.5 2.1-10.5 10.3 2.5 14.4L24 35.8l-13 6.2 2.5-14.4L3 17.3l14.5-2.1z", vb: [48, 48] },
+  pill:   { path: "M24 6a12 12 0 1 1 0 24 12 12 0 0 1 0-24zm-2 26h4v14h-4z", vb: [48, 46] },
+  flag:   { path: "M12 4h4v42h-4zM18 6h22l-6 9 6 9H18z", vb: [48, 46] },
+};
+const SYMBOL_ORDER = ["pin", "shield", "star", "pill", "flag"];
+
+function featureName(props) {
+  if (!props) return "";
+  return String(props.name || props.title || props.Name || props.label || "").trim();
+}
+function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+function markerEl(colorOverride, symbolOverride, label) {
+  const m = state.markerStyle;
+  const sym = SYMBOLS[symbolOverride] || SYMBOLS[m.symbol];
+  const color = colorOverride || m.color;
+  const w = m.size, h = m.size * sym.vb[1] / sym.vb[0];
+  const div = document.createElement("div");
+  div.className = "gc-marker";
+  div.innerHTML =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + sym.vb[0] + ' ' + sym.vb[1] + '" width="' + w + '" height="' + h + '" style="display:block">' +
+    '<path d="' + sym.path + '" fill="' + color + '" stroke="' + m.stroke + '" stroke-width="' + m.strokeW + '"/></svg>' +
+    (label ? '<div class="gc-label">' + esc(label) + '</div>' : "");
+  return div;
+}
+
+function makeMarker(lng, lat, props) {
+  const m = state.markerStyle;
+  let element;
+  const name = featureName(props);
+  if (m.type === "styled") {
+    element = markerEl(props && props["icon-color"], props && props["icon-symbol"], m.labels ? name : "");
+  } else {
+    element = document.createElement("div");
+    element.innerHTML = '<img width="25" height="41" src="https://unpkg.com/maplibre-gl@3.6.2/dist/images/marker-icon.png">';
+  }
+  const mk = new maplibregl.Marker({ element: element, anchor: "bottom" }).setLngLat([lng, lat]);
+  if (name && !(m.type === "styled" && m.labels)) {
+    mk.setPopup(new maplibregl.Popup({ offset: 24, closeButton: false }).setText(name));
+  }
+  return mk;
+}
+
+/* ---------- overlays ---------- */
+function collectFeatures(node, out) {
+  if (!node || typeof node !== "object") return;
+  if (Array.isArray(node)) { node.forEach(n => collectFeatures(n, out)); return; }
+  switch (node.type) {
+    case "Feature": out.push(node); break;
+    case "FeatureCollection": (node.features || []).forEach(f => collectFeatures(f, out)); break;
+    case "Geometry": out.push({ type: "Feature", geometry: node, properties: {} }); break;
+    default: break;
+  }
+}
+function flattenGeomCols(feats) {
+  const out = [];
+  feats.forEach(f => {
+    if (f.geometry && f.geometry.type === "GeometryCollection") {
+      (f.geometry.geometries || []).forEach(g => out.push({ type: "Feature", properties: f.properties || {}, geometry: g }));
+    }
+  });
+  return out;
+}
+function shapeFeatures() {
+  const feats = [];
+  collectFeatures(state.geojson, feats);
+  return feats.concat(flattenGeomCols(feats))
+    .filter(f => f.geometry && f.geometry.type !== "Point" && f.geometry.type !== "MultiPoint" && f.geometry.type !== "GeometryCollection")
+    .map(f => ({ type: "Feature", properties: f.properties, geometry: maybeCurve(f.geometry) }));
+}
+
+function dashPattern(style, w) {
+  const k = Math.max(1, Math.round(w));
+  switch (style) {
+    case "dash":    return [3*k, 2*k];
+    case "dot":     return [0.4*k, 2.2*k];
+    case "dashdot": return [4*k, 2*k, 0.4*k, 2*k];
+    default: return null;
+  }
+}
+
+function attachDataLayers() {
+  if (!state.map) return;
+  ["gc-fills", "gc-lines"].forEach(id => { if (state.map.getLayer(id)) state.map.removeLayer(id); });
+  if (state.map.getSource("gc-data")) state.map.removeSource("gc-data");
+  if (!state.geojson || !state.overlayStyle.show) return;
+
+  const os = state.overlayStyle;
+  state.map.addSource("gc-data", { type: "geojson", data: { type: "FeatureCollection", features: shapeFeatures() } });
+  state.map.addLayer({
+    id: "gc-fills", type: "fill", source: "gc-data",
+    paint: { "fill-color": os.fill, "fill-opacity": os.fillO },
+    filter: ["in", ["geometry-type"], ["literal", ["Polygon", "MultiPolygon"]]],
+  });
+  const dash = dashPattern(os.dash, os.lineW);
+  state.map.addLayer({
+    id: "gc-lines", type: "line", source: "gc-data",
+    layout: dash ? { "line-cap": "round", "line-join": "round" } : {},
+    paint: Object.assign(
+      { "line-color": os.line, "line-width": os.lineW, "line-opacity": 0.9 },
+      dash ? { "line-dasharray": dash } : {}
+    ),
+    filter: ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString", "Polygon", "MultiPolygon"]]],
+  });
+  if (os.tooltip) {
+    ["gc-fills", "gc-lines"].forEach(lid => {
+      state.map.on("click", lid, e => {
+        const name = e.features && e.features[0] && featureName(e.features[0].properties);
+        if (name) new maplibregl.Popup({ closeButton: false }).setLngLat(e.lngLat).setText(name).addTo(state.map);
+      });
+      state.map.on("mouseenter", lid, () => state.map.getCanvas().style.cursor = "pointer");
+      state.map.on("mouseleave", lid, () => state.map.getCanvas().style.cursor = "");
+    });
+  }
+}
+
+function restyleOverlays() {
+  if (!state.map || !state.map.getSource("gc-data")) return;
+  const os = state.overlayStyle;
+  if (state.map.getLayer("gc-lines")) {
+    state.map.setPaintProperty("gc-lines", "line-color", os.line);
+    state.map.setPaintProperty("gc-lines", "line-width", os.lineW);
+    const dash = dashPattern(os.dash, os.lineW);
+    try { state.map.setPaintProperty("gc-lines", "line-dasharray", dash || [1, 0]); } catch (e) {}
+  }
+  if (state.map.getLayer("gc-fills")) {
+    state.map.setPaintProperty("gc-fills", "fill-color", os.fill);
+    state.map.setPaintProperty("gc-fills", "fill-opacity", os.fillO);
+  }
+  ["gc-fills", "gc-lines"].forEach(id => {
+    if (state.map.getLayer(id)) state.map.setLayoutProperty(id, "visibility", os.show ? "visible" : "none");
+  });
+}
+
+/* ---------- draggable crop frame ---------- */
+function regionAspect() {
+  const r = printRegion();
+  return r.mw / r.mh;
+}
+function placeCropTool() {
+  if (!state.cropBox) return;
+  const b = state.cropBox;
+  croptool.style.left = b.x + "px";
+  croptool.style.top = b.y + "px";
+  croptool.style.width = b.w + "px";
+  croptool.style.height = b.h + "px";
+}
+function refitCropBox() {
+  if (!state.cropBox) return;
+  const b = state.cropBox;
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  const A = regionAspect();
+  const w = Math.min(mapwrap.clientWidth * 0.9, mapwrap.clientHeight * A * 0.9);
+  const h = w / A;
+  state.cropBox = {
+    x: Math.min(Math.max(0, cx - w / 2), Math.max(0, mapwrap.clientWidth - w)),
+    y: Math.min(Math.max(0, cy - h / 2), Math.max(0, mapwrap.clientHeight - h)),
+    w, h,
+  };
+  placeCropTool();
+}
+function defaultCropBox() {
+  const A = regionAspect();
+  const w = Math.min(mapwrap.clientWidth * 0.8, mapwrap.clientHeight * A * 0.8);
+  const h = w / A;
+  return { x: (mapwrap.clientWidth - w) / 2, y: (mapwrap.clientHeight - h) / 2, w, h };
+}
+function toggleCrop() {
+  state.cropActive = !state.cropActive;
+  if (state.cropActive) {
+    if (!state.cropBox) state.cropBox = defaultCropBox();
+    croptool.classList.add("on");
+    placeCropTool();
+    $("croptoggle").textContent = "Remove crop frame";
+  } else {
+    croptool.classList.remove("on");
+    $("croptoggle").textContent = "Set crop frame on map";
+  }
+}
+function wireCropDrag() {
+  let dragging = null;
+  croptool.addEventListener("pointerdown", e => {
+    if (!state.cropActive) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragging = { px: e.clientX, py: e.clientY, bx: state.cropBox.x, by: state.cropBox.y };
+    croptool.classList.add("dragging");
+    try { croptool.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  croptool.addEventListener("pointermove", e => {
+    if (!dragging) return;
+    const dx = e.clientX - dragging.px, dy = e.clientY - dragging.py;
+    state.cropBox.x = Math.min(mapwrap.clientWidth - state.cropBox.w, Math.max(0, dragging.bx + dx));
+    state.cropBox.y = Math.min(mapwrap.clientHeight - state.cropBox.h, Math.max(0, dragging.by + dy));
+    placeCropTool();
+  });
+  croptool.addEventListener("pointerup", e => {
+    dragging = null;
+    croptool.classList.remove("dragging");
+    try { croptool.releasePointerCapture(e.pointerId); } catch (err) {}
+  });
+}
+
+/* ---------- render all data ---------- */
+function renderGeoJSON() {
+  if (!state.map || !state.geojson) return;
+  state.markers.forEach(m => m.remove());
+  state.markers = [];
+  state.points = [];
+  state.bounds = new maplibregl.LngLatBounds();
+
+  const feats = [];
+  collectFeatures(state.geojson, feats);
+  const all = feats.concat(flattenGeomCols(feats));
+
+  let nMarkers = 0, nShapes = 0;
+  all.forEach(f => {
+    if (!f.geometry) return;
+    const t = f.geometry.type;
+    if (t === "Point" || t === "MultiPoint") {
+      const pts = t === "Point" ? [f.geometry.coordinates] : f.geometry.coordinates;
+      pts.forEach(c => {
+        state.points.push({ lng: c[0], lat: c[1], props: f.properties || {} });
+        const mk = makeMarker(c[0], c[1], f.properties);
+        mk.addTo(state.map);
+        state.markers.push(mk);
+        state.bounds.extend([c[0], c[1]]);
+        nMarkers++;
+      });
+    } else if (t !== "GeometryCollection") {
+      nShapes++;
+      eachCoord(f.geometry, c => state.bounds.extend([c[0], c[1]]));
+    }
+  });
+
+  attachDataLayers();
+
+  const meta = state.geojson.type === "FeatureCollection" ? (state.geojson.features || []).length : all.length;
+  $("stats").style.display = "block";
+  $("stats").innerHTML = "<strong>" + meta + "</strong> feature(s) · <strong>" + nMarkers + "</strong> marker(s) · <strong>" + nShapes + "</strong> overlay shape(s)";
+  if (!state.bounds.isEmpty()) state.map.fitBounds(state.bounds, { padding: 80, maxZoom: 4 });
+}
+
+function eachCoord(geom, cb) {
+  if (!geom) return;
+  switch (geom.type) {
+    case "Point": cb(geom.coordinates); break;
+    case "MultiPoint": case "LineString": (geom.coordinates || []).forEach(cb); break;
+    case "MultiLineString": case "Polygon": (geom.coordinates || []).forEach(r => r.forEach(cb)); break;
+    case "MultiPolygon": (geom.coordinates || []).forEach(p => p.forEach(r => r.forEach(cb))); break;
+  }
+}
+
+function ingest(txt) {
+  if (txt && txt.trim()) {
+    try { state.geojson = JSON.parse(txt); }
+    catch (e) { alert("Invalid JSON: " + e.message); return; }
+  }
+  if (!state.geojson) { alert("No GeoJSON loaded."); return; }
+  renderGeoJSON();
+}
+
+function loadSample() {
+  SAMPLE_GEOJSON = makeSampleTrip();
+  $("geojsonpaste").value = JSON.stringify(SAMPLE_GEOJSON, null, 1);
+  state.geojson = SAMPLE_GEOJSON;
+  renderGeoJSON();
+}
+
+function restyleMarkers() { if (state.geojson) renderGeoJSON(); }
+
+/* ---------- FX ---------- */
+function applyFX() {
+  mapwrap.classList.remove("fx-vignette", "fx-grain", "fx-scanlines");
+  if (!$("fxon").checked) return;
+  mapwrap.classList.add($("fxtype").value);
+}
+
+/* ---------- poster press ---------- */
+function drawSymOn(ctx, sym, cx, cyBottom, size, color, stroke, strokeW) {
+  const vb = sym.vb;
+  const w = size, h = size * vb[1] / vb[0];
+  ctx.save();
+  ctx.translate(cx - w / 2, cyBottom - h);
+  ctx.scale(w / vb[0], h / vb[1]);
+  const p = new Path2D(sym.path);
+  ctx.fillStyle = color;
+  ctx.fill(p);
+  if (strokeW > 0) { ctx.strokeStyle = stroke; ctx.lineWidth = strokeW; ctx.stroke(p); }
+  ctx.restore();
+}
+
+/* Bake DOM markers into the print.
+   At call time the map element is sized EXACTLY reg.mw × reg.mh (poster
+   pixels) with the print camera, so map.project() returns POSITIONS in
+   poster pixels: use them AS-IS. Only SIZE is multiplied by scaleUp
+   (poster px per screen px) so markers keep their on-screen proportion.
+   The v9 bug was multiplying positions by scaleUp as well — every
+   marker ended up far outside the clip and was cut from the print. */
+function drawDataMarkersOn(ctx, reg, scaleUp) {
+  const m = state.markerStyle;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(reg.marginPx, reg.marginPx, reg.mw, reg.mh);
+  ctx.clip();
+  state.points.forEach(pt => {
+    const p = state.map.project([pt.lng, pt.lat]);
+    const x = reg.marginPx + p.x;            // position as-is
+    const yB = reg.marginPx + p.y;
+    if (x < reg.marginPx - 100 || x > reg.marginPx + reg.mw + 100 ||
+        yB < reg.marginPx - 100 || yB > reg.marginPx + reg.mh + 100) return;
+    const name = featureName(pt.props);
+    if (m.type === "styled") {
+      const color = (pt.props && pt.props["icon-color"]) || m.color;
+      const sym = SYMBOLS[pt.props && pt.props["icon-symbol"]] || SYMBOLS[m.symbol];
+      drawSymOn(ctx, sym, x, yB, m.size * scaleUp, color, m.stroke, m.strokeW * scaleUp);
+      if (m.labels && name) {
+        ctx.font = "700 " + Math.round(11 * scaleUp) + "px 'Courier New', monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.lineWidth = 3 * scaleUp;
+        ctx.strokeStyle = "rgba(244,236,216,0.9)";
+        ctx.strokeText(name, x, yB + 2 * scaleUp);
+        ctx.fillStyle = "#33261d";
+        ctx.fillText(name, x, yB + 2 * scaleUp);
+      }
+    } else {
+      drawSymOn(ctx, SYMBOLS.pin, x, yB, 25 * scaleUp, "#C62828", "#7c1515", 1.5 * scaleUp);
+    }
+  });
+  ctx.restore();
+}
+
+function bakeFXOn(ctx, reg) {
+  const fx = $("fxtype").value;
+  const { w, h, marginPx, mw, mh } = reg;
+  if (fx === "fx-vignette") {
+    const g = ctx.createRadialGradient(w/2, h/2, Math.min(w,h)*0.35, w/2, h/2, Math.max(w,h)*0.72);
+    g.addColorStop(0, "rgba(30,18,8,0)");
+    g.addColorStop(1, "rgba(30,18,8,0.6)");
+    ctx.fillStyle = g;
+    ctx.fillRect(marginPx, marginPx, mw, mh);
+  } else if (fx === "fx-scanlines") {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(marginPx, marginPx, mw, mh); ctx.clip();
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    for (let y = marginPx; y < marginPx + mh; y += 3) ctx.fillRect(marginPx, y, mw, 1);
+    ctx.restore();
+  } else if (fx === "fx-grain") {
+    const nz = document.createElement("canvas"); nz.width = 240; nz.height = 240;
+    const nc = nz.getContext("2d");
+    const img = nc.createImageData(240, 240);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.random() * 255;
+      img.data[i] = img.data[i+1] = img.data[i+2] = v;
+      img.data[i+3] = 28;
+    }
+    nc.putImageData(img, 0, 0);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(marginPx, marginPx, mw, mh); ctx.clip();
+    for (let y = marginPx; y < marginPx + mh; y += 240)
+      for (let x = marginPx; x < marginPx + mw; x += 240)
+        ctx.drawImage(nz, x, y);
+    ctx.restore();
+  }
+}
+
+async function exportPoster() {
+  const reg = printRegion();
+  $("busy").classList.add("on");
+  const prevCss = mapEl.style.cssText;
+  try {
+    // Freeze current camera — the print derives from it directly.
+    const cam = {
+      center: state.map.getCenter(),
+      zoom: state.map.getZoom(),
+      bearing: state.map.getBearing(),
+      pitch: state.map.getPitch(),
+    };
+
+    let scaleUp;
+    if (state.cropActive && state.cropBox) {
+      // zoom so the framed screen width spans exactly the print width
+      scaleUp = reg.mw / state.cropBox.w;
+      cam.zoom = cam.zoom + Math.log2(scaleUp);
+      // center on the frame's geographic center
+      const c = state.map.unproject([
+        state.cropBox.x + state.cropBox.w / 2,
+        state.cropBox.y + state.cropBox.h / 2,
+      ]);
+      cam.center = c.wrap();
+    } else {
+      scaleUp = reg.mw / mapwrap.clientWidth;
+      cam.zoom = cam.zoom + Math.log2(scaleUp);
+    }
+
+    // offscreen render, sized EXACTLY like the poster map region
+    asideEl.style.display = "none";
+    mapEl.style.cssText = "position:fixed; left:-99999px; top:0; width:" + reg.mw + "px; height:" + reg.mh + "px;";
+    state.map.resize();
+    state.map.jumpTo(cam);
+    await new Promise(res => state.map.once("idle", res));
+    await new Promise(res => setTimeout(res, 400));
+
+    const out = document.createElement("canvas");
+    out.width = reg.w; out.height = reg.h;
+    const ctx = out.getContext("2d");
+
+    let bg = "#ffffff";
+    try {
+      const style = state.map.getStyle();
+      const bgl = (style.layers || []).find(l => l.type === "background");
+      const v = bgl && state.map.getPaintProperty(bgl.id, "background-color");
+      if (typeof v === "string" && v[0] === "#") bg = v;
+      else if (state.styleEdits.background) bg = state.styleEdits.background;
+    } catch (e) { if (state.styleEdits.background) bg = state.styleEdits.background; }
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, reg.w, reg.h);
+
+    const src = state.map.getCanvas();
+    ctx.drawImage(src, reg.marginPx, reg.marginPx, reg.mw, reg.mh);
+
+    drawDataMarkersOn(ctx, reg, scaleUp);
+
+    if (reg.title) {
+      ctx.fillStyle = "#33261d";
+      ctx.font = "700 " + Math.round(reg.th * 0.5) + "px 'Courier New', monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(reg.title, reg.w / 2, reg.h - reg.marginPx - reg.th / 2);
+    }
+
+    if ($("fxon").checked) bakeFXOn(ctx, reg);
+
+    out.toBlob(blob => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "cartomatic-" + $("papersize").value + "-" + $("orient").value + "-" + $("dpi").value + "dpi.png";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+    }, "image/png");
+  } finally {
+    mapEl.style.cssText = prevCss;
+    asideEl.style.display = "";
+    state.map.resize();
+    $("busy").classList.remove("on");
+  }
+}
+
+let asideEl, mapEl;
+
+/* ---------- wiring ---------- */
+function buildSymbolRow() {
+  const row = $("symbols");
+  SYMBOL_ORDER.forEach(sym => {
+    const b = document.createElement("button");
+    b.title = sym;
+    b.innerHTML = '<svg viewBox="0 0 ' + SYMBOLS[sym].vb[0] + ' ' + SYMBOLS[sym].vb[1] + '"><path d="' + SYMBOLS[sym].path + '"/></svg>';
+    b.addEventListener("click", () => {
+      state.markerStyle.symbol = sym;
+      [...row.children].forEach(x => x.classList.toggle("active", x === b));
+      restyleMarkers();
+    });
+    row.appendChild(b);
+  });
+  row.firstChild.classList.add("active");
+}
+
+function wireUI() {
+  asideEl = document.querySelector("aside");
+  mapEl = $("map");
+
+  state.map = new maplibregl.Map({
+    container: "map",
+    style: VECTOR_STYLES.liberty,
+    center: [10, 25], zoom: 2,
+    attributionControl: { compact: true },
+    preserveDrawingBuffer: true,
+  });
+  state.map.addControl(new maplibregl.NavigationControl(), "top-left");
+  state.map.addControl(new maplibregl.ScaleControl(), "bottom-right");
+  state.map.on("style.load", () => { attachDataLayers(); applyStyleEdits(); applyHideLabels(); });
+
+  $("basemap").value = "liberty";
+  $("basemap").addEventListener("change", e => setBasemap(e.target.value));
+  $("resetstyle").addEventListener("click", () => { state.styleEdits = {}; setBasemap(state.basemap); });
+  $("paledawn").addEventListener("click", applyPaleDawn);
+  $("hidlabels").addEventListener("change", e => { state.hideLabels = e.target.checked; applyHideLabels(); });
+
+  $("loaddata").addEventListener("click", () => ingest($("geojsonpaste").value));
+  $("samplebtn").addEventListener("click", loadSample);
+  $("geojsonfile").addEventListener("change", e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { $("geojsonpaste").value = r.result; ingest(r.result); };
+    r.readAsText(f);
+  });
+
+  $("croptoggle").addEventListener("click", toggleCrop);
+  wireCropDrag();
+  ["papersize", "orient", "margin", "postertitle"].forEach(id =>
+    $(id).addEventListener("change", () => { if (state.cropActive) refitCropBox(); }));
+
+  document.querySelectorAll("#markertype input[name=mtype]").forEach(r => {
+    r.addEventListener("change", () => {
+      state.markerStyle.type = r.value;
+      document.querySelectorAll("#markertype label")
+        .forEach(l => l.classList.toggle("active", l.contains(r) && r.checked));
+      $("markeropts").classList.toggle("disabled-block", r.value !== "styled");
+      if (state.geojson) renderGeoJSON();
+    });
+  });
+  $("mcolor").addEventListener("input", e => { state.markerStyle.color = e.target.value; restyleMarkers(); });
+  $("msize").addEventListener("input", e => { state.markerStyle.size = +e.target.value || 36; restyleMarkers(); });
+  $("mstroke").addEventListener("input", e => { state.markerStyle.stroke = e.target.value; restyleMarkers(); });
+  $("mstrokew").addEventListener("input", e => { state.markerStyle.strokeW = +e.target.value || 0; restyleMarkers(); });
+  $("mlabels").addEventListener("change", e => { state.markerStyle.labels = e.target.checked; if (state.geojson) renderGeoJSON(); });
+
+  $("showoverlays").addEventListener("change", e => {
+    state.overlayStyle.show = e.target.checked;
+    $("overlayopts").classList.toggle("disabled-block", !e.target.checked);
+    if (state.geojson) attachDataLayers();
+    restyleOverlays();
+  });
+  $("otooltip").addEventListener("change", e => { state.overlayStyle.tooltip = e.target.checked; if (state.geojson) attachDataLayers(); });
+  $("oline").addEventListener("input", e => { state.overlayStyle.line = e.target.value; restyleOverlays(); });
+  $("olinew").addEventListener("input", e => { state.overlayStyle.lineW = +e.target.value || 2; restyleOverlays(); });
+  $("linestyle").addEventListener("change", e => { state.overlayStyle.dash = e.target.value; if (state.geojson) attachDataLayers(); });
+  $("curvestyle").addEventListener("change", e => { state.overlayStyle.curve = e.target.value; if (state.geojson) attachDataLayers(); });
+  $("bowstrength").addEventListener("input", e => {
+    state.overlayStyle.bow = (+e.target.value || 25) / 100;
+    $("bowval").textContent = e.target.value + "%";
+    if (state.geojson) attachDataLayers();
+  });
+  $("ofill").addEventListener("input", e => { state.overlayStyle.fill = e.target.value; restyleOverlays(); });
+  $("ofillo").addEventListener("input", e => { state.overlayStyle.fillO = (+e.target.value || 0) / 100; restyleOverlays(); });
+
+  $("fxon").addEventListener("change", () => { $("fxopts").classList.toggle("disabled-block", !$("fxon").checked); applyFX(); });
+  $("fxtype").addEventListener("change", applyFX);
+
+  $("exportposter").addEventListener("click", exportPoster);
+
+  $("fitbtn").addEventListener("click", () => {
+    if (state.bounds && !state.bounds.isEmpty()) state.map.fitBounds(state.bounds, { padding: 80, maxZoom: 4 });
+    else alert("No data loaded yet.");
+  });
+
+  window.addEventListener("resize", () => {
+    if (state.cropActive && state.cropBox) {
+      state.cropBox.x = Math.min(state.cropBox.x, Math.max(0, mapwrap.clientWidth - state.cropBox.w));
+      state.cropBox.y = Math.min(state.cropBox.y, Math.max(0, mapwrap.clientHeight - state.cropBox.h));
+      placeCropTool();
+    }
+  });
+
+  $("geojsonpaste").value = JSON.stringify(SAMPLE_GEOJSON, null, 1);
+  state.geojson = SAMPLE_GEOJSON;
+  state.map.once("load", () => {
+    buildStyleEditor();
+    renderGeoJSON();
+    applyPaleDawn();
+  });
+}
+
+buildSymbolRow();
+wireUI();
+applyFX();
+</script>
+</body>
+</html>
